@@ -1,0 +1,7 @@
+{
+  "lib/*.ex": {
+    "type": "lib",
+    "alternate": "test/lib/{}_test.exs",
+    "template": ["defmodule {camelcase|capitalize|dot} do", "", "end"]
+  }
+}
