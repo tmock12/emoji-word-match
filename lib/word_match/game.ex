@@ -68,6 +68,10 @@ defmodule WordMatch.Game do
   @doc """
   Take a guess at an index on a `%WordMatch.Game{}`
   """
+  def guess(%__MODULE__{board: board} = game, index) when index >= length(board) do
+    game
+  end
+
   def guess(%__MODULE__{guesses: guesses} = game, index) when length(guesses) < 2 do
     case already_guessed?(game, index) do
       true -> game
