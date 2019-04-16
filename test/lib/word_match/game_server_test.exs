@@ -16,7 +16,7 @@ defmodule WordMatch.GameServerTest do
 
     test "guesses a word at given index", %{state: state} do
       index = Enum.random(1..5)
-      {:reply, game} = GameServer.handle_call({:guess, index}, nil, state)
+      {:reply, game, game} = GameServer.handle_call({:guess, index}, nil, state)
       marked_card = Enum.at(game.board, index)
       refute marked_card.word == nil
       refute marked_card.emoji == nil

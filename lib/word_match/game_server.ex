@@ -27,6 +27,6 @@ defmodule WordMatch.GameServer do
 
   def handle_call({:guess, index}, _from, state) do
     game = WordMatch.Game.guess(state, index)
-    {:reply, game}
+    {:reply, game, game}
   end
 end
