@@ -1,6 +1,8 @@
 defmodule WordMatch.GameServer do
   use GenServer
 
+  @server_timeout :timer.hours(3)
+
   # Client
 
   def start_link(game_name, game_options \\ %{}) do
@@ -16,13 +18,13 @@ defmodule WordMatch.GameServer do
   end
 
   def guess(game_name, index) do
-    GenServer.call(via_tuple(game_name), {:guess, index})
+    GenServer.call(via_tuple(game_name), {:guess, index}, @server_timeout)
   end
 
   # Callbacks
 
   def init(game_options) do
-    {:ok, WordMatch.Game.new(game_options)}
+    {:ok, WordMatch.Game.new(game_options), @server_timeout}
   end
 
   def handle_call({:guess, index}, _from, state) do
