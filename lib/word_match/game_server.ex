@@ -27,6 +27,10 @@ defmodule WordMatch.GameServer do
 
   def handle_call({:guess, index}, _from, state) do
     game = WordMatch.Game.guess(state, index)
-    {:reply, game, game}
+    {:reply, public_view(game), game}
+  end
+
+  defp public_view(%WordMatch.Game{} = game) do
+    Map.take(game, ~w(board)a)
   end
 end

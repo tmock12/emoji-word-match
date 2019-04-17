@@ -16,10 +16,16 @@ defmodule WordMatch.GameServerTest do
 
     test "guesses a word at given index", %{state: state} do
       index = Enum.random(1..5)
-      {:reply, game, game} = GameServer.handle_call({:guess, index}, nil, state)
+      {:reply, _public_view, game} = GameServer.handle_call({:guess, index}, nil, state)
       marked_card = Enum.at(game.board, index)
       refute marked_card.word == nil
       refute marked_card.emoji == nil
+    end
+
+    test "returns a simplified public view", %{state: state} do
+      index = Enum.random(1..5)
+      {:reply, public_view, game} = GameServer.handle_call({:guess, index}, nil, state)
+      assert public_view == %{board: game.board}
     end
   end
 end
