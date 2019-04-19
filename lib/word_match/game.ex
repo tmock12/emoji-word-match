@@ -3,9 +3,13 @@ defmodule WordMatch.Game do
   Container for a game or emoji word match.
   """
 
-  defstruct values: [], board: [], guesses: []
+  defstruct values: [], board: [], guesses: [], players: [], player_rotation: []
 
-  @game_defaults %{pairs: 6, emojis: WordMatch.Emojis.read()}
+  @game_defaults %{
+    pairs: 6,
+    emojis: WordMatch.Emojis.read(),
+    players: []
+  }
 
   @doc """
   Creates a new game with guesses, board and values.
@@ -48,7 +52,8 @@ defmodule WordMatch.Game do
   def new(options \\ %{}) do
     %{
       pairs: pairs,
-      emojis: emojis
+      emojis: emojis,
+      players: players
     } = Map.merge(@game_defaults, options)
 
     values =
@@ -62,7 +67,7 @@ defmodule WordMatch.Game do
       %WordMatch.Card{}
       |> List.duplicate(pairs * 2)
 
-    %__MODULE__{values: values, board: board}
+    %__MODULE__{values: values, board: board, players: players}
   end
 
   @doc """
@@ -83,7 +88,13 @@ defmodule WordMatch.Game do
     game
     |> mark_matched_or_empty
     |> clear_guesses
+    |> advance_player
     |> guess(index)
+  end
+
+  def add_player(%__MODULE__{players: players, player_rotation: player_rotation} = game, name) do
+    new_player = WordMatch.Player.new(%{name: name})
+    %{game | players: players ++ [new_player], player_rotation: player_rotation ++ [new_player]}
   end
 
   defp mark_matched_or_empty(%{board: board, guesses: [guess1, guess2]} = game) do
@@ -106,6 +117,19 @@ defmodule WordMatch.Game do
 
   defp clear_guesses(game) do
     %{game | guesses: []}
+  end
+
+  def advance_player(%{player_rotation: player_rotation, players: players} = game) do
+    new_player_rotation =
+      case player_rotation do
+        [_currentPlayer | []] ->
+          players
+
+        [_currentPlayer | remainingPlayers] ->
+          remainingPlayers
+      end
+
+    %{game | player_rotation: new_player_rotation}
   end
 
   defp update_board_guess(game, index) do
