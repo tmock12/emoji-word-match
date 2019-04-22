@@ -3,12 +3,11 @@ defmodule WordMatch.Game do
   Container for a game or emoji word match.
   """
 
-  defstruct values: [], board: [], guesses: [], players: [], player_rotation: []
+  defstruct values: [], board: [], guesses: [], players: [], player_turns: [], started: false
 
   @game_defaults %{
     pairs: 6,
-    emojis: WordMatch.Emojis.read(),
-    players: []
+    emojis: WordMatch.Emojis.read()
   }
 
   @doc """
@@ -52,8 +51,7 @@ defmodule WordMatch.Game do
   def new(options \\ %{}) do
     %{
       pairs: pairs,
-      emojis: emojis,
-      players: players
+      emojis: emojis
     } = Map.merge(@game_defaults, options)
 
     values =
@@ -67,21 +65,31 @@ defmodule WordMatch.Game do
       %WordMatch.Card{}
       |> List.duplicate(pairs * 2)
 
-    %__MODULE__{values: values, board: board, players: players}
+    %__MODULE__{values: values, board: board}
+  end
+
+  @doc """
+  Start a game and lock in player turns
+  """
+
+  def start_game(%__MODULE__{started: true}), do: {:error, "already started"}
+  def start_game(%__MODULE__{players: []}), do: {:error, "must have at least 1 player"}
+
+  def start_game(%__MODULE__{started: false, players: players} = game) do
+    game
+    |> Map.put(:started, true)
+    |> Map.put(:player_turns, %WordMatch.PlayerTurns{remaining: Enum.reverse(players)})
   end
 
   @doc """
   Take a guess at an index on a `%WordMatch.Game{}`
   """
-  def guess(%__MODULE__{board: board} = game, index) when index >= length(board) do
-    game
+  def guess(%__MODULE__{started: false}, _index) do
+    {:error, "game must be started"}
   end
 
-  def guess(%__MODULE__{guesses: guesses} = game, index) when length(guesses) < 2 do
-    case already_guessed?(game, index) do
-      true -> game
-      false -> update_board_guess(game, index)
-    end
+  def guess(%__MODULE__{board: board} = game, index) when index >= length(board) do
+    game
   end
 
   def guess(%__MODULE__{guesses: guesses} = game, index) when length(guesses) >= 2 do
@@ -92,9 +100,17 @@ defmodule WordMatch.Game do
     |> guess(index)
   end
 
-  def add_player(%__MODULE__{players: players, player_rotation: player_rotation} = game, name) do
-    new_player = WordMatch.Player.new(%{name: name})
-    %{game | players: players ++ [new_player], player_rotation: player_rotation ++ [new_player]}
+  def guess(%__MODULE__{} = game, index) do
+    case already_guessed?(game, index) do
+      true -> game
+      false -> update_board_guess(game, index)
+    end
+  end
+
+  def add_player(%__MODULE__{started: true}, _name), do: :error
+
+  def add_player(%__MODULE__{players: players} = game, player_name) do
+    %{game | players: [player_name | players]}
   end
 
   defp mark_matched_or_empty(%{board: board, guesses: [guess1, guess2]} = game) do
@@ -103,8 +119,12 @@ defmodule WordMatch.Game do
 
     match_or_empty =
       case value1 == value2 do
-        true -> %{value1 | matched_by: :player_1}
-        false -> %WordMatch.Card{}
+        true ->
+          [current_player | _remaining] = game.player_turns.remaining
+          %{value1 | matched_by: current_player}
+
+        false ->
+          %WordMatch.Card{}
       end
 
     board =
@@ -119,17 +139,8 @@ defmodule WordMatch.Game do
     %{game | guesses: []}
   end
 
-  def advance_player(%{player_rotation: player_rotation, players: players} = game) do
-    new_player_rotation =
-      case player_rotation do
-        [_currentPlayer | []] ->
-          players
-
-        [_currentPlayer | remainingPlayers] ->
-          remainingPlayers
-      end
-
-    %{game | player_rotation: new_player_rotation}
+  defp advance_player(%{player_turns: player_turns} = game) do
+    %{game | player_turns: WordMatch.PlayerTurns.rotate(player_turns)}
   end
 
   defp update_board_guess(game, index) do

@@ -11,7 +11,12 @@ defmodule WordMatch.GameServerTest do
 
   describe "callbacks" do
     setup do
-      {:ok, state: Game.new()}
+      game =
+        Game.new()
+        |> Map.put(:players, %WordMatch.Player{name: "Mia"})
+        |> Map.put(:started, true)
+
+      {:ok, state: game}
     end
 
     test "guesses a word at given index", %{state: state} do
@@ -25,7 +30,13 @@ defmodule WordMatch.GameServerTest do
     test "returns a simplified public view", %{state: state} do
       index = Enum.random(1..5)
       {:reply, public_view, game} = GameServer.handle_call({:guess, index}, nil, state)
-      assert public_view == %{board: game.board}
+      assert public_view == %{board: game.board, started: true}
+    end
+
+    test "add a player", %{state: state} do
+      state = %{state | started: false, players: []}
+      {:reply, _public_view, game} = GameServer.handle_call({:add_player, "Mia"}, nil, state)
+      assert %{players: ["Mia"]} = game
     end
   end
 end

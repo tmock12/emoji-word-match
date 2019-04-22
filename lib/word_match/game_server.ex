@@ -21,6 +21,10 @@ defmodule WordMatch.GameServer do
     GenServer.call(via_tuple(game_name), {:guess, index}, @server_timeout)
   end
 
+  def add_player(game_name, %{player_name: player_name}) do
+    GenServer.call(via_tuple(game_name), {:add_player, player_name}, @server_timeout)
+  end
+
   # Callbacks
 
   def init(game_options) do
@@ -28,11 +32,29 @@ defmodule WordMatch.GameServer do
   end
 
   def handle_call({:guess, index}, _from, state) do
-    game = WordMatch.Game.guess(state, index)
-    {:reply, public_view(game), game}
+    case WordMatch.Game.guess(state, index) do
+      %WordMatch.Game{} = game ->
+        {:reply, public_view(game), game}
+
+      {:error, error} ->
+        {:reply, error, state}
+
+      _ ->
+        :nope
+    end
+  end
+
+  def handle_call({:add_player, player_name}, _from, state) do
+    case WordMatch.Game.add_player(state, player_name) do
+      %WordMatch.Game{} = game ->
+        {:reply, public_view(game), game}
+
+      {:error, error} ->
+        {:reply, error, state}
+    end
   end
 
   defp public_view(%WordMatch.Game{} = game) do
-    Map.take(game, ~w(board)a)
+    Map.take(game, ~w(board started)a)
   end
 end
